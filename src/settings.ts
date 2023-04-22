@@ -37,7 +37,7 @@ export class ObsidianSettingTab extends PluginSettingTab {
 				.setPlaceholder('sk-xxx')
 				.setValue(this.plugin.settings.openApiKey)
 				.onChange(async (value) => {
-					this.plugin.settings.openApiKey = value;
+					this.plugin.settings.openApiKey = value.trim();
 					await this.plugin.saveSettings();
 				}));
 
@@ -48,7 +48,7 @@ export class ObsidianSettingTab extends PluginSettingTab {
 				.setPlaceholder(DEFAULT_SETTINGS.endpoint)
 				.setValue(this.plugin.settings.endpoint)
 				.onChange(async (value) => {
-					this.plugin.settings.endpoint = value;
+					this.plugin.settings.endpoint = value.trim();
 					await this.plugin.saveSettings();
 				}));
 
@@ -59,7 +59,7 @@ export class ObsidianSettingTab extends PluginSettingTab {
 				.setPlaceholder(DEFAULT_SETTINGS.model)
 				.setValue(this.plugin.settings.model)
 				.onChange(async (value) => {
-					this.plugin.settings.model = value;
+					this.plugin.settings.model = value.trim();
 					await this.plugin.saveSettings();
 				}));
 

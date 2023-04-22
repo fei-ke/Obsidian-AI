@@ -1,7 +1,9 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin } from 'obsidian';
+import { App, Editor, EditorPosition, EditorTransaction, Notice, Plugin } from 'obsidian';
 import { PluginSettings, DEFAULT_SETTINGS, ObsidianSettingTab } from './settings'
 import { InputModal } from './input-modal';
 import { Command as AiCommand, DEFAULT_COMMANDS } from './command';
+import { ChatGPT } from './chat-gpt';
+
 
 export default class ObsidianPlugin extends Plugin {
 	settings: PluginSettings;
@@ -27,9 +29,91 @@ export default class ObsidianPlugin extends Plugin {
 	async processCommand(command: AiCommand, editor: Editor) {
 		const system = command.system ? await this.replacePlaceHolder(command.system, editor) : ''
 		const user = await this.replacePlaceHolder(command.user, editor)
+		this.generateText(editor, system, user, command.newline)
+	}
 
+	generateText(editor: Editor, system: string, user: string, newline: boolean = true) {
 		console.log("system: " + system)
 		console.log("user: " + user)
+
+		const messages = []
+
+		if (system.length > 0) {
+			messages.push({
+				role: 'system',
+				content: system,
+			})
+		}
+
+		if (user.length > 0) {
+			messages.push({
+				role: 'user',
+				content: user,
+			})
+		}
+
+
+		let cursorToWrite = editor.listSelections().last()?.anchor ?? editor.getCursor()
+
+		const plugin = this
+
+		ChatGPT.request(
+			this.settings.endpoint,
+			this.settings.openApiKey,
+			this.settings.model,
+			messages,
+			newline,
+			(content: string) => {
+				cursorToWrite = plugin.writeText(editor, cursorToWrite, content)
+			},
+			(error: string) => {
+				new Notice(error);
+			})
+	}
+
+	writeText(editor: Editor, pos: EditorPosition, text: string): EditorPosition {
+		const textLines = text.split('\n')
+
+		let line = pos.line
+		let ch = pos.ch
+
+		for (let i = 0; i < textLines.length; i++) {
+			const t = textLines[i];
+
+			if (t.length > 0) {
+				this.write(editor, line, ch, t)
+				ch += t.length;
+			}
+
+			//has new line
+			if (i < textLines.length - 1) {
+				this.write(editor, line, ch, '\n')
+				line++; ch = 0;
+			}
+		}
+
+		const newCursor: EditorPosition = {
+			line: line,
+			ch: ch
+		}
+
+		editor.setCursor(newCursor)
+
+		return newCursor
+	}
+
+	write(edited: Editor, line: number, ch: number, text: string) {
+
+		const transaction: EditorTransaction = {
+			changes: [{
+				from: {
+					line: line,
+					ch: ch
+				},
+				text: text
+			}]
+		}
+		edited.transaction(transaction)
 	}
 
 	onunload() {
@@ -74,6 +158,9 @@ export default class ObsidianPlugin extends Plugin {
 			},
 			SELECTION_OR_FULL: () => {
 				return getSelection() ?? editor.getValue()
+			},
+			SELECTION_OR_TITLE: () => {
+				return getSelection() ?? `${this.app.workspace.getActiveFile()?.basename}`
 			}
 		}
 
@@ -108,3 +195,5 @@ export default class ObsidianPlugin extends Plugin {
 		});
 	}
 }
+
+
