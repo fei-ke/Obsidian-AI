@@ -11,19 +11,40 @@ export default class ObsidianPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		DEFAULT_COMMANDS.forEach((aiCommand) => {
-			this.addCommand({
-				id: aiCommand.id,
-				name: aiCommand.name,
-				icon: aiCommand.icon,
-				editorCallback: (editor: Editor) => {
-					this.processCommand(aiCommand, editor)
-				}
-			})
-		})
+		const customCommands: AiCommand[] = this.loadCustomCommands()
+
+		const mergedCommands = [...customCommands, ...DEFAULT_COMMANDS.filter((item1) => !customCommands.find((item2) => item1.id === item2.id))];
+
+		for (const aiCommand of mergedCommands) {
+			try {
+				this.addCommand({
+					id: aiCommand.id,
+					name: aiCommand.name,
+					icon: aiCommand.icon,
+					editorCallback: (editor: Editor) => {
+						this.processCommand(aiCommand, editor)
+					}
+				})
+			} catch (e) {
+				new Notice(`Failed to load custom command: ${aiCommand.name}. Please check the console for more details.`)
+				console.log(e)
+			}
+		}
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObsidianSettingTab(this.app, this));
+	}
+
+	private loadCustomCommands(): AiCommand[] {
+		if (!this.settings.customCommands) return []
+
+		try {
+			return JSON.parse(this.settings.customCommands).filter((item: AiCommand) => item.id && item.name && item.messages)
+		} catch (e) {
+			new Notice(`Failed to parse custom commands, Please check the console for more details.`)
+			console.log(e)
+			return []
+		}
 	}
 
 	async processCommand(command: AiCommand, editor: Editor) {
