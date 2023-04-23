@@ -8,9 +8,10 @@ export class ChatGPT {
 		token: string,
 		model: string,
 		messages: Array<any>,
-		newline: boolean,
 		onMessage: (text: string) => void,
 		onError: (text: string) => void,
+		onStart: () => void,
+		onEnd: () => void,
 	) {
 
 		const data = {
@@ -58,9 +59,9 @@ export class ChatGPT {
 		sse.addEventListener("readystatechange", (e: any) => {
 			console.log("sse ready state = " + e.readyState)
 			if (e.readyState == SSE.OPEN) {
-				if (newline) {
-					onMessage('\n')
-				}
+				onStart()
+			} else if (e.readyState == SSE.CLOSED) {
+				onEnd()
 			}
 		});
 		sse.stream()

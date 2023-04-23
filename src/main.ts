@@ -27,33 +27,43 @@ export default class ObsidianPlugin extends Plugin {
 	}
 
 	async processCommand(command: AiCommand, editor: Editor) {
-		const system = command.system ? await this.replacePlaceHolder(command.system, editor) : ''
-		const user = await this.replacePlaceHolder(command.user, editor)
-		this.generateText(editor, system, user, command.newline)
+		const messages: any[] = []
+
+		for (const message of command.messages) {
+			messages.push({
+				...message,
+				content: await this.replacePlaceHolder(message.content, editor)
+			})
+		}
+
+		this.generateText(editor, messages, command.format)
 	}
 
-	generateText(editor: Editor, system: string, user: string, newline: boolean = true) {
-		console.log("system: " + system)
-		console.log("user: " + user)
+	generateText(editor: Editor, messages: any[], format: string = '\n{{RESPONSE}}\n') {
+		console.log("messages: " + JSON.stringify(messages))
+		console.log("format: " + format)
 
-		const messages = []
+		const selection = editor.listSelections().last();
 
-		if (system.length > 0) {
-			messages.push({
-				role: 'system',
-				content: system,
-			})
+		let cursorToWrite: EditorPosition
+		if (selection) {
+			cursorToWrite = selection.anchor.line > selection.head.line ? selection.anchor : selection.head
+		} else {
+			cursorToWrite = editor.getCursor()
 		}
 
-		if (user.length > 0) {
-			messages.push({
-				role: 'user',
-				content: user,
-			})
+		console.log(`cursorToWrite: line = ${cursorToWrite.line}, ch = ${cursorToWrite.ch}`)
+
+		const split = format.split('{{RESPONSE}}')
+		const prefix = split[0]
+		const suffix = split[1]
+
+		if (prefix) {
+			cursorToWrite = this.writeText(editor, cursorToWrite, prefix)
 		}
-
-
-		let cursorToWrite = editor.listSelections().last()?.anchor ?? editor.getCursor()
+		if (suffix) {
+			this.writeText(editor, cursorToWrite, suffix)
+		}
 
 		const plugin = this
 
@@ -62,12 +72,17 @@ export default class ObsidianPlugin extends Plugin {
 			this.settings.openApiKey,
 			this.settings.model,
 			messages,
-			newline,
 			(content: string) => {
 				cursorToWrite = plugin.writeText(editor, cursorToWrite, content)
 			},
 			(error: string) => {
 				new Notice(error);
+			},
+			() => {
+
+			},
+			() => {
+
 			})
 	}
 
@@ -147,20 +162,23 @@ export default class ObsidianPlugin extends Plugin {
 			FILE_NAME: () => {
 				return `${this.app.workspace.getActiveFile()?.name}`;
 			},
-			SELECTION_OR_LINE: () => {
+			SELECTION: () => {
 				return getSelection() ?? editor.getLine(editor.getCursor().line)
+			},
+			LINE: () => {
+				return editor.getLine(editor.getCursor().line)
 			},
 			INPUT: async () => {
 				return this.showInputModal()
 			},
-			FULL: () => {
+			BODY: () => {
 				return editor.getValue()
 			},
-			SELECTION_OR_FULL: () => {
-				return getSelection() ?? editor.getValue()
+			DATE: () => {
+				return new Date().toLocaleDateString()
 			},
-			SELECTION_OR_TITLE: () => {
-				return getSelection() ?? `${this.app.workspace.getActiveFile()?.basename}`
+			TIME: () => {
+				return new Date().toLocaleTimeString()
 			}
 		}
 
@@ -170,13 +188,18 @@ export default class ObsidianPlugin extends Plugin {
 			let result = text;
 
 			while ((match = regex.exec(text))) {
-				const variableName = match[1].trim();
+				const options = match[1].trim().split('|');
 
-				if (!(variableName in variables)) continue
+				let value = undefined;
 
-				const variableValue = await Promise.resolve(variables[variableName]());
+				for (const v of options) {
+					if (!(v in variables)) continue
 
-				result = result.replace(match[0], variableValue);
+					value = await Promise.resolve(variables[v]());
+
+					if (value) break;
+				}
+				result = result.replace(match[0], value!!);
 			}
 			return result;
 		}
