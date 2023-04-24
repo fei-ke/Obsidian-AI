@@ -32,7 +32,7 @@ export class ObsidianSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('OpenAI API key')
-			.setDesc('Input your openai API key')
+			.setDesc('Input your OpenAI API key')
 			.addText(text => text
 				.setPlaceholder('sk-xxx')
 				.setValue(this.plugin.settings.openApiKey)
@@ -67,7 +67,7 @@ export class ObsidianSettingTab extends PluginSettingTab {
 			.setName('Custom Commands')
 			.setDesc('Custom your own commands to use Obsidian AI')
 			.addTextArea(text => text
-				.setPlaceholder('json format command list')
+				.setPlaceholder('Json format command list')
 				.setValue(this.plugin.settings.customCommands)
 				.onChange(async (value) => {
 					this.plugin.settings.customCommands = value;
