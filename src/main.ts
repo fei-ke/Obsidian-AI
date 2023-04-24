@@ -50,10 +50,14 @@ export default class ObsidianPlugin extends Plugin {
 	async processCommand(command: AiCommand, editor: Editor) {
 		const messages: any[] = []
 
+		function requestInput() {
+			return Promise.resolve(this.showInputModal(command.name))
+		}
+
 		for (const message of command.messages) {
 			messages.push({
 				...message,
-				content: await this.replacePlaceHolder(message.content, editor)
+				content: await this.replacePlaceHolder(message.content, editor, requestInput.bind(this))
 			})
 		}
 
@@ -165,15 +169,27 @@ export default class ObsidianPlugin extends Plugin {
 	}
 
 
-	async replacePlaceHolder(template: string, editor: Editor) {
+	async replacePlaceHolder(template: string, editor: Editor, requestInput: () => string) {
 		interface Variables {
 			[key: string]: () => string | Promise<string>
 		}
 
-		function getSelection() {
-			const selection = editor.getSelection()
+		function getSelection(): string {
+			return editor.getSelection().trim()
+		}
 
-			return selection.length > 0 ? selection : null;
+		function getLine(lineNumber: number): string {
+			return editor.getLine(lineNumber--)
+		}
+
+		function getAbove(lineNumber: number): string {
+			while (lineNumber >= 0) {
+				const line = getLine(lineNumber--);				
+				if (line) {
+					return line;
+				}
+			}
+			return '';
 		}
 
 		const variables = {
@@ -184,13 +200,16 @@ export default class ObsidianPlugin extends Plugin {
 				return `${this.app.workspace.getActiveFile()?.name}`;
 			},
 			SELECTION: () => {
-				return getSelection() ?? editor.getLine(editor.getCursor().line)
+				return getSelection()
 			},
 			LINE: () => {
-				return editor.getLine(editor.getCursor().line)
+				return getLine(editor.getCursor().line)
+			},
+			ABOVE: () => {
+				return getAbove(editor.getCursor().line)
 			},
 			INPUT: async () => {
-				return this.showInputModal()
+				return requestInput()
 			},
 			BODY: () => {
 				return editor.getValue()
@@ -228,14 +247,14 @@ export default class ObsidianPlugin extends Plugin {
 		return replaceWithVariables(template, variables)
 	}
 
-	async showInputModal(): Promise<string> {
+	async showInputModal(title: string): Promise<string> {
 		return new Promise((resolve, reject) => {
 
 			const onSubmit = (input: string) => {
 				resolve(input)
 			}
 
-			new InputModal(this.app, onSubmit).open()
+			new InputModal(this.app, title, onSubmit).open()
 		});
 	}
 }

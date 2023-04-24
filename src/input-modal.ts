@@ -1,18 +1,23 @@
 import { App, Modal, Platform, Setting, TextAreaComponent } from "obsidian";
 
 export class InputModal extends Modal {
-	input: string
+	title: string
 	onSubmit: (value: string) => void
 
+	input: string
 	inputField: TextAreaComponent
 
-	constructor(app: App, onSubmit: (value: string) => void) {
+	constructor(app: App, title: string, onSubmit: (value: string) => void) {
 		super(app);
+		this.title = title
 		this.onSubmit = onSubmit
 	}
 
 	onOpen() {
 		const { contentEl } = this;
+		
+		new Setting(contentEl).setName(this.title)
+
 		const container = contentEl.createDiv()
 		container.className = 'input-modal-container'
 

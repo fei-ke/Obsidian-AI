@@ -44,7 +44,7 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 			},
 			{
 				role: 'user',
-				content: 'a piece of content is "{{SELECTION|LINE}}", request is "{{INPUT}}"',
+				content: 'a piece of content is "{{SELECTION|LINE|ABOVE}}", request is "{{INPUT}}"',
 			}
 		]
 	},
@@ -59,7 +59,7 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 			},
 			{
 				role: 'user',
-				content: '{{SELECTION|LINE}}',
+				content: '{{SELECTION|LINE|ABOVE}}',
 			}
 		],
 		format: ''
