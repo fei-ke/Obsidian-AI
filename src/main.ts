@@ -3,10 +3,12 @@ import { PluginSettings, DEFAULT_SETTINGS, ObsidianSettingTab } from './settings
 import { InputModal } from './input-modal';
 import { Command as AiCommand, DEFAULT_COMMANDS } from './command';
 import { ChatGPT } from './chat-gpt';
-
+import { PopupMenu } from './popup-menu';
 
 export default class ObsidianPlugin extends Plugin {
-	settings: PluginSettings;
+	public settings: PluginSettings;
+
+	private popupMenu: PopupMenu;
 
 	async onload() {
 		await this.loadSettings();
@@ -30,6 +32,26 @@ export default class ObsidianPlugin extends Plugin {
 				console.log(e)
 			}
 		}
+		this.popupMenu = new PopupMenu(this.app, this, mergedCommands)
+
+		this.registerEditorSuggest(this.popupMenu)
+
+		this.addCommand({
+			id: 'show-popup-menu',
+			name: 'Show popup menu',
+			icon: 'bot',
+			hotkeys: [{
+				modifiers: ["Mod"],
+				key: " ",
+			}],
+			editorCallback: (editor) => {
+				if (!this.popupMenu.isShowing()) {
+					this.popupMenu.show(editor)
+				} else {
+					this.popupMenu.close()
+				}
+			}
+		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObsidianSettingTab(this.app, this));
@@ -184,7 +206,7 @@ export default class ObsidianPlugin extends Plugin {
 
 		function getAbove(lineNumber: number): string {
 			while (lineNumber >= 0) {
-				const line = getLine(lineNumber--);				
+				const line = getLine(lineNumber--);
 				if (line) {
 					return line;
 				}
