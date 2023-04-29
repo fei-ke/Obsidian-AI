@@ -1,9 +1,10 @@
 import { Editor, EditorPosition, EditorTransaction, Notice, Plugin } from 'obsidian';
 import { PluginSettings, DEFAULT_SETTINGS, ObsidianSettingTab } from './settings'
 import { InputModal } from './input-modal';
-import { Command as AiCommand, DEFAULT_COMMANDS } from './command';
+import { Command as AiCommand, DEFAULT_COMMANDS, DEFAULT_RESPONSE_FORMAT, RESPONSE_PLACEHOLDER } from './command';
 import { ChatGPT, Message } from './chat-gpt';
 import { PopupMenu } from './popup-menu';
+import { PlaceHolder, Resolved, Variables } from "./placeholder";
 
 export default class ObsidianPlugin extends Plugin {
 	public settings: PluginSettings;
@@ -101,9 +102,9 @@ export default class ObsidianPlugin extends Plugin {
 		this.generateText(editor, messages, command.format)
 	}
 
-	generateText(editor: Editor, messages: Message[], format: string = '\n{{RESPONSE}}\n') {
+	private generateText(editor: Editor, messages: Message[], responseFormat = DEFAULT_RESPONSE_FORMAT) {
 		console.log("messages: " + JSON.stringify(messages))
-		console.log("format: " + format)
+		console.log("responseFormat: " + responseFormat)
 
 		const selection = editor.listSelections().last();
 
@@ -116,16 +117,6 @@ export default class ObsidianPlugin extends Plugin {
 
 		console.log(`cursorToWrite: line = ${cursorToWrite.line}, ch = ${cursorToWrite.ch}`)
 
-		const split = format.split('{{RESPONSE}}')
-		const prefix = split[0]
-		const suffix = split[1]
-
-		if (prefix) {
-			cursorToWrite = this.writeText(editor, cursorToWrite, prefix)
-		}
-		if (suffix) {
-			this.writeText(editor, cursorToWrite, suffix)
-		}
 
 		this.chatGPT.request({
 			endpoint: this.settings.endpoint,
@@ -139,13 +130,40 @@ export default class ObsidianPlugin extends Plugin {
 				new Notice(error);
 			},
 			onStart: () => {
+				cursorToWrite = this.prepareResponseFormat(editor, cursorToWrite, responseFormat)
 			},
 			onEnd: () => {
 			}
 		})
 	}
 
-	writeText(editor: Editor, pos: EditorPosition, text: string): EditorPosition {
+	private prepareResponseFormat(editor: Editor, cursorToWrite: EditorPosition, responseFormat: string): EditorPosition {
+		let cursorToResponse = cursorToWrite
+
+		const handleVariable = (item: Resolved) => {
+			if (item.variable == RESPONSE_PLACEHOLDER.NEWLINE && editor.getLine(cursorToWrite.line)) {
+				cursorToWrite = this.writeText(editor, {
+						line: cursorToWrite.line,
+						ch: editor.getLine(cursorToWrite.line).length
+					}, '\n'
+				)
+			} else if (item.variable == RESPONSE_PLACEHOLDER.RESPONSE) {
+				cursorToResponse = cursorToWrite
+			}
+		};
+
+		PlaceHolder.resolvePlaceholder(responseFormat).forEach(item => {
+			if (item.variable) {
+				handleVariable(item);
+			} else {
+				cursorToWrite = this.writeText(editor, cursorToWrite, item.text)
+			}
+		})
+
+		return cursorToResponse
+	}
+
+	private writeText(editor: Editor, pos: EditorPosition, text: string): EditorPosition {
 		const textLines = text.split('\n')
 
 		let line = pos.line
@@ -162,7 +180,8 @@ export default class ObsidianPlugin extends Plugin {
 			//has new line
 			if (i < textLines.length - 1) {
 				this.write(editor, line, ch, '\n')
-				line++; ch = 0;
+				line++;
+				ch = 0;
 			}
 		}
 
@@ -176,7 +195,7 @@ export default class ObsidianPlugin extends Plugin {
 		return newCursor
 	}
 
-	write(edited: Editor, line: number, ch: number, text: string) {
+	private write(edited: Editor, line: number, ch: number, text: string) {
 
 		const transaction: EditorTransaction = {
 			changes: [{
@@ -203,10 +222,7 @@ export default class ObsidianPlugin extends Plugin {
 	}
 
 
-	async replacePlaceHolder(template: string, editor: Editor, requestInput: () => string) {
-		interface Variables {
-			[key: string]: () => string | Promise<string>
-		}
+	private async replacePlaceHolder(template: string, editor: Editor, requestInput: () => string) {
 
 		function getSelection(): string {
 			return editor.getSelection().trim()
@@ -226,7 +242,7 @@ export default class ObsidianPlugin extends Plugin {
 			return '';
 		}
 
-		const variables = {
+		const variables: Variables = {
 			TITLE: () => {
 				return `${this.app.workspace.getActiveFile()?.basename}`
 			},
@@ -256,32 +272,10 @@ export default class ObsidianPlugin extends Plugin {
 			}
 		}
 
-		async function replaceWithVariables(text: string, variables: Variables): Promise<string> {
-			const regex = /\{{(.+?)}}/g;
-			let match;
-			let result = text;
-
-			while ((match = regex.exec(text))) {
-				const options = match[1].trim().split('|');
-
-				let value = undefined;
-
-				for (const v of options) {
-					if (!(v in variables)) continue
-
-					value = await Promise.resolve(variables[v]());
-
-					if (value) break;
-				}
-				result = result.replace(match[0], value!!);
-			}
-			return result;
-		}
-
-		return replaceWithVariables(template, variables)
+		return PlaceHolder.replaceWithVariables(template, variables)
 	}
 
-	async showInputModal(title: string): Promise<string> {
+	private async showInputModal(title: string): Promise<string> {
 		return new Promise((resolve, reject) => {
 
 			const onSubmit = (input: string) => {
@@ -292,5 +286,4 @@ export default class ObsidianPlugin extends Plugin {
 		});
 	}
 }
-
 

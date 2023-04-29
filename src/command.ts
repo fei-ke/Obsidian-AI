@@ -19,6 +19,13 @@ export interface Command {
 	type?: string,
 }
 
+export const RESPONSE_PLACEHOLDER = {
+	RESPONSE: 'RESPONSE',
+	NEWLINE: 'NEWLINE',
+}
+
+export const DEFAULT_RESPONSE_FORMAT = '{{NEWLINE}}{{RESPONSE}}{{NEWLINE}}'
+
 export const DEFAULT_COMMANDS: Array<Command> = [
 	{
 		id: 'ask',
@@ -36,7 +43,7 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 		]
 	},
 	{
-		id: 'ask-selecetion',
+		id: 'ask-selection',
 		icon: 'rocket',
 		name: 'Ask AI based on selection',
 		messages: [
@@ -51,7 +58,7 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 		]
 	},
 	{
-		id: 'continue-writting',
+		id: 'continue-writing',
 		icon: 'edit-3',
 		name: 'Continue writing for the current selection or line',
 		messages: [
@@ -84,7 +91,7 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 	{
 		id: 'summary',
 		icon: 'book',
-		name: 'Generate summary base on selection or full documennt',
+		name: 'Generate summary base on selection or full document',
 		messages: [
 			{
 				role: 'system',
