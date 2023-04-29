@@ -5,7 +5,9 @@
 }
 
 .status-bar-icon {
-	--icon-s: 12px;
+	display: flex;
+	align-items: center;
+	--icon-size: 15px;
 }
 
 .status-bar-text {

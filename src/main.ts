@@ -8,6 +8,7 @@ import { PlaceHolder, Resolved, Variables } from "./placeholder";
 import { logger } from "./logger";
 
 interface StatusBarItem {
+	container: HTMLElement,
 	icon: HTMLElement,
 	text: HTMLElement
 }
@@ -231,7 +232,7 @@ export default class ObsidianPlugin extends Plugin {
 	}
 
 	private createStatusBarItem(): StatusBarItem {
-		const container = this.addStatusBarItem().createDiv();
+		const container = this.addStatusBarItem()
 		container.className = 'status-bar-container'
 
 		const icon = container.createDiv()
@@ -240,28 +241,33 @@ export default class ObsidianPlugin extends Plugin {
 		const text = container.createSpan();
 		text.className = 'status-bar-text'
 
-		// setIcon(icon, 'arrow-up-down')
+		// setIcon(icon, 'user')
 		// text.setText("Connecting")
 
 		return {
+			container: container,
 			icon: icon,
 			text: text
 		}
 	}
 
 	private setStatus(status?: 'connecting' | 'generating' | '') {
+		const {container, icon, text} = this.statusBarItem
 		switch (status) {
 			case 'connecting':
-				this.statusBarItem.text.setText('Connecting...')
-				setIcon(this.statusBarItem.icon, 'globe')
+				text.setText('Connecting...')
+				setIcon(icon, 'user')
+				container.show()
 				break
 			case 'generating':
-				this.statusBarItem.text.setText('Generating...')
-				setIcon(this.statusBarItem.icon, 'arrow-up-down')
+				text.setText('Generating...')
+				setIcon(icon, 'user')
+				container.show()
 				break
 			default:
-				this.statusBarItem.text.setText('')
-				setIcon(this.statusBarItem.icon, '')
+				text.setText('')
+				setIcon(icon, '')
+				container.hide()
 		}
 	}
 
