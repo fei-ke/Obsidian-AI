@@ -5,6 +5,7 @@ import { Command as AiCommand, DEFAULT_COMMANDS, DEFAULT_RESPONSE_FORMAT, RESPON
 import { ChatGPT, Message } from './chat-gpt';
 import { PopupMenu } from './popup-menu';
 import { PlaceHolder, Resolved, Variables } from "./placeholder";
+import { logger } from "./logger";
 
 export default class ObsidianPlugin extends Plugin {
 	public settings: PluginSettings;
@@ -32,7 +33,7 @@ export default class ObsidianPlugin extends Plugin {
 				})
 			} catch (e) {
 				new Notice(`Failed to load custom command: ${aiCommand.name}. Please check the console for more details.`)
-				console.log(e)
+				logger.error(e)
 			}
 		}
 		this.popupMenu = new PopupMenu(this.app, this, mergedCommands)
@@ -65,7 +66,7 @@ export default class ObsidianPlugin extends Plugin {
 				key: "c",
 			}],
 			callback: () => {
-				console.log("abort generate")
+				logger.debug("abort generate")
 				this.chatGPT.abort()
 			}
 		});
@@ -80,7 +81,7 @@ export default class ObsidianPlugin extends Plugin {
 			return JSON.parse(this.settings.customCommands).filter((item: AiCommand) => item.id && item.name && item.messages)
 		} catch (e) {
 			new Notice(`Failed to parse custom commands, Please check the console for more details.`)
-			console.log(e)
+			logger.error(e)
 			return []
 		}
 	}
@@ -103,8 +104,8 @@ export default class ObsidianPlugin extends Plugin {
 	}
 
 	private generateText(editor: Editor, messages: Message[], responseFormat = DEFAULT_RESPONSE_FORMAT) {
-		console.log("messages: " + JSON.stringify(messages))
-		console.log("responseFormat: " + responseFormat)
+		logger.debug("messages: " + JSON.stringify(messages))
+		logger.debug("responseFormat: " + responseFormat)
 
 		const selection = editor.listSelections().last();
 
@@ -115,7 +116,7 @@ export default class ObsidianPlugin extends Plugin {
 			cursorToWrite = editor.getCursor()
 		}
 
-		console.log(`cursorToWrite: line = ${cursorToWrite.line}, ch = ${cursorToWrite.ch}`)
+		logger.debug(`cursorToWrite: line = ${cursorToWrite.line}, ch = ${cursorToWrite.ch}`)
 
 
 		this.chatGPT.request({

@@ -1,9 +1,18 @@
-import { App, Editor, EditorPosition, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo, TFile } from "obsidian";
+import {
+	App,
+	Editor,
+	EditorPosition,
+	EditorSuggest,
+	EditorSuggestContext,
+	EditorSuggestTriggerInfo,
+	TFile
+} from "obsidian";
 import { Command } from "./command";
 import ObsidianPlugin from "./main";
+import { logger } from "./logger";
 
 //a hacky way to show EditorSuggest as popup menu
-export class PopupMenu extends EditorSuggest<Command>{
+export class PopupMenu extends EditorSuggest<Command> {
 	private commands: Command[]
 
 	private plugin: ObsidianPlugin
@@ -20,12 +29,10 @@ export class PopupMenu extends EditorSuggest<Command>{
 		super(app)
 		this.plugin = plugin
 		this.commands = commands
-
-		app.workspace.activeEditor?.hoverPopover
 	}
 
 	show(editor: Editor) {
-		console.log("show PopupMenu");
+		logger.debug("show PopupMenu");
 
 		//when has selections, suggest popup will not showing,
 		//hacked by temporarily clear selections to bypass this check,
@@ -37,7 +44,7 @@ export class PopupMenu extends EditorSuggest<Command>{
 		}
 
 		if (selection && this.hasSelections) {
-			console.log('clear selections');
+			logger.debug('clear selections');
 			editor.setSelection(selection.head);
 		}
 
@@ -61,7 +68,7 @@ export class PopupMenu extends EditorSuggest<Command>{
 		super.close()
 		this.reset()
 
-		console.log("close PopupMenu");
+		logger.debug("close PopupMenu");
 	}
 
 	isShowing(): boolean {
@@ -69,9 +76,12 @@ export class PopupMenu extends EditorSuggest<Command>{
 	}
 
 	onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null): EditorSuggestTriggerInfo | null {
-		console.log(`onTrigger: manual=${file == null}, firstTriggerAfterShowing=${this.firstTriggerAfterShowing}, hasSelections=${this.hasSelections}`);
+		const manually = file == null
+		if (manually) {
+			logger.debug(`onTrigger: manually=${file == null}, firstTriggerAfterShowing=${this.firstTriggerAfterShowing}, hasSelections=${this.hasSelections}`);
+		}
 
-		//after a manual showing and without selection, a sequence of onTrigger will be called, we should ignore this one
+		//after a manual showing and without selection, a subsequent of onTrigger will be called, we should ignore this one
 		if (this.firstTriggerAfterShowing && !this.hasSelections) {
 			this.firstTriggerAfterShowing = false
 			return null
@@ -82,13 +92,13 @@ export class PopupMenu extends EditorSuggest<Command>{
 			this.close()
 		}
 
-		//marke as manual trigger
+		//mark as manual trigger
 		if (file == null) {
 			this.editor = editor
 			this.firstTriggerAfterShowing = true
 			this._isShowing = true
 
-			return { start: cursor, end: cursor, query: "", }
+			return {start: cursor, end: cursor, query: "",}
 		}
 
 		return null
@@ -97,21 +107,21 @@ export class PopupMenu extends EditorSuggest<Command>{
 	open(): void {
 		super.open()
 		this._isShowing = true
-		console.log("PopupMenu showing");
+		logger.debug("PopupMenu showing");
 	}
 
 	getSuggestions(context: EditorSuggestContext): Command[] | Promise<Command[]> {
-		console.log("getSuggestions")
+		logger.debug("getSuggestions")
 		return this.commands
 	}
 
 	renderSuggestion(value: Command, el: HTMLElement): void {
-		console.log("renderSuggestion")
+		logger.debug("renderSuggestion")
 		el.setText(value.name)
 	}
 
 	selectSuggestion(value: Command, evt: MouseEvent | KeyboardEvent): void {
-		console.log("selectSuggestion")
+		logger.debug("selectSuggestion")
 		if (this.editor == null) return
 
 		this.plugin.processCommand(value, this.editor)

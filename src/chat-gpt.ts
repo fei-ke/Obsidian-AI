@@ -1,4 +1,5 @@
 import { SSE } from "sse.js";
+import { logger } from "./logger";
 
 type SSE = typeof SSE
 
@@ -63,16 +64,17 @@ export class ChatGPT {
 
 		this.sse.addEventListener("error", (e: any) => {
 			try {
-				console.log("error data: " + e.data)
+				logger.info("error data: " + e.data)
 				const json = JSON.parse(e.data)
 				request.onError?.(json.error.message)
 			} catch (e) {
+				logger.error(e)
 				request.onError?.("On error occurred. Please check the console for more details.")
 			}
 		});
 
 		this.sse.addEventListener("readystatechange", (e: any) => {
-			console.log("sse ready state = " + e.readyState)
+			logger.debug("sse ready state = " + e.readyState)
 			switch (e.readyState) {
 				case 1:
 					request.onStart?.()
