@@ -49,7 +49,7 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 		messages: [
 			{
 				role: 'system',
-				content: 'User are writting a ducument, the ducument file name is {{FILE_NAME}}, You are trying to help user writting document. Respond using markdown. Current date is "{{DATE}} {{TIME}}"',
+				content: 'User are writing a document, the document file name is {{FILE_NAME}}, You are trying to help user writing document. Respond using markdown. Current date is "{{DATE}} {{TIME}}"',
 			},
 			{
 				role: 'user',
@@ -64,7 +64,7 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 		messages: [
 			{
 				role: 'system',
-				content: "User are writting a ducument, the ducument file name is {{FILE_NAME}}, You are trying to continue to complete the user's content. Use user's language to response. Write only the completion and nothing else. Respond using markdown.",
+				content: "User are writing a document, the document file name is {{FILE_NAME}}, You are trying to continue to complete the user's content. Use user's language to response. Write only the completion and nothing else. Respond using markdown.",
 			},
 			{
 				role: 'user',
