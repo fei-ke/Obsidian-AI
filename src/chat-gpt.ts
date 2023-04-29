@@ -9,9 +9,11 @@ export interface Message {
 	name?: string
 }
 
+//https://platform.openai.com/docs/api-reference/chat/create
 interface RequestData {
 	endpoint: string,
 	token: string,
+	organization?: string,
 	model: string,
 	messages: Array<Message>,
 	onMessage: (text: string) => void,
@@ -36,20 +38,24 @@ export class ChatGPT {
 			this.abort()
 		}
 
+		const headers: any = {
+			"Authorization": `Bearer ${request.token}`,
+			"Content-Type": "application/json",
+		};
+
+		if (request.organization) {
+			headers["OpenAI-Organization"] = request.organization
+		}
+
 		this.sse = new SSE(request.endpoint, {
-			headers: {
-				Authorization: `Bearer ${request.token}`,
-				"Content-Type": "application/json",
-			},
+			headers: headers,
 			method: "POST",
 			payload: JSON.stringify(data),
 		});
 
-
 		this.sse.addEventListener('message', function (e: any) {
 			try {
 				if (e.data == '[DONE]') return;
-
 				const json = JSON.parse(e.data)
 				const content = json.choices[0].delta.content
 
@@ -58,6 +64,7 @@ export class ChatGPT {
 				}
 
 			} catch (e) {
+				logger.error(e)
 				request.onError?.(e.toString())
 			}
 		});

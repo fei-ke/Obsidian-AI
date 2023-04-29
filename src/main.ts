@@ -131,9 +131,10 @@ export default class ObsidianPlugin extends Plugin {
 
 
 		this.chatGPT.request({
-			endpoint: this.settings.endpoint ?? DEFAULT_SETTINGS.endpoint,
+			endpoint: this.settings.endpoint || DEFAULT_SETTINGS.endpoint,
+			organization: this.settings.openAiOrganization,
 			token: this.settings.openApiKey,
-			model: this.settings.model ?? DEFAULT_SETTINGS.model,
+			model: this.settings.model || DEFAULT_SETTINGS.model,
 			messages: messages,
 			onMessage: (content: string) => {
 				cursorToWrite = this.writeText(editor, cursorToWrite, content)

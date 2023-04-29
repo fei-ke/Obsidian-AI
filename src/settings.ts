@@ -3,6 +3,7 @@ import ObsidianPlugin from './main'
 
 export interface PluginSettings {
 	openApiKey: string;
+	openAiOrganization: string,
 	endpoint: string;
 	model: string;
 	customCommands: string
@@ -11,6 +12,7 @@ export interface PluginSettings {
 export const DEFAULT_SETTINGS: PluginSettings = {
 	openApiKey: '',
 	endpoint: 'https://api.openai.com/v1/chat/completions',
+	openAiOrganization: '',
 	model: 'gpt-3.5-turbo',
 	customCommands: ''
 }
@@ -24,15 +26,15 @@ export class ObsidianSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
-		const { containerEl } = this;
+		const {containerEl} = this;
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Settings for Obsidian AI.' });
+		containerEl.createEl('h2', {text: 'Settings for Obsidian AI.'});
 
 		new Setting(containerEl)
 			.setName('OpenAI API key')
-			.setDesc('Input your OpenAI API key')
+			.setDesc('Enter your OpenAI API key')
 			.addText(text => text
 				.setPlaceholder('sk-xxx')
 				.setValue(this.plugin.settings.openApiKey)
@@ -49,6 +51,17 @@ export class ObsidianSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.endpoint)
 				.onChange(async (value) => {
 					this.plugin.settings.endpoint = value.trim();
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('OpenAI Organization')
+			.setDesc('Enter your OpenAI organization or leave blank if you don\'t have one.')
+			.addText(text => text
+				.setPlaceholder('org-xxx')
+				.setValue(this.plugin.settings.openAiOrganization)
+				.onChange(async (value) => {
+					this.plugin.settings.openAiOrganization = value.trim();
 					await this.plugin.saveSettings();
 				}));
 
