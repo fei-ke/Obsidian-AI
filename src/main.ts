@@ -1,4 +1,4 @@
-import { Editor, EditorPosition, EditorTransaction, Notice, Plugin } from 'obsidian';
+import { Editor, EditorPosition, EditorTransaction, Notice, Plugin, setIcon } from 'obsidian';
 import { PluginSettings, DEFAULT_SETTINGS, ObsidianSettingTab } from './settings'
 import { InputModal } from './input-modal';
 import { Command as AiCommand, DEFAULT_COMMANDS, DEFAULT_RESPONSE_FORMAT, RESPONSE_PLACEHOLDER } from './command';
@@ -7,12 +7,19 @@ import { PopupMenu } from './popup-menu';
 import { PlaceHolder, Resolved, Variables } from "./placeholder";
 import { logger } from "./logger";
 
+interface StatusBarItem {
+	icon: HTMLElement,
+	text: HTMLElement
+}
+
 export default class ObsidianPlugin extends Plugin {
 	public settings: PluginSettings;
 
 	private popupMenu: PopupMenu;
 
 	private chatGPT = new ChatGPT()
+
+	private statusBarItem: StatusBarItem
 
 	async onload() {
 		await this.loadSettings();
@@ -70,6 +77,9 @@ export default class ObsidianPlugin extends Plugin {
 				this.chatGPT.abort()
 			}
 		});
+
+		this.statusBarItem = this.createStatusBarItem()
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObsidianSettingTab(this.app, this));
 	}
@@ -129,11 +139,17 @@ export default class ObsidianPlugin extends Plugin {
 			},
 			onError: (error: string) => {
 				new Notice(error);
+				this.setStatus()
 			},
 			onStart: () => {
+				this.setStatus('generating')
 				cursorToWrite = this.prepareResponseFormat(editor, cursorToWrite, responseFormat)
 			},
 			onEnd: () => {
+				this.setStatus('')
+			},
+			onConnecting: () => {
+				this.setStatus('connecting')
 			}
 		})
 	}
@@ -212,6 +228,41 @@ export default class ObsidianPlugin extends Plugin {
 
 	onunload() {
 
+	}
+
+	private createStatusBarItem(): StatusBarItem {
+		const container = this.addStatusBarItem().createDiv();
+		container.className = 'status-bar-container'
+
+		const icon = container.createDiv()
+		icon.className = 'status-bar-icon'
+
+		const text = container.createSpan();
+		text.className = 'status-bar-text'
+
+		// setIcon(icon, 'arrow-up-down')
+		// text.setText("Connecting")
+
+		return {
+			icon: icon,
+			text: text
+		}
+	}
+
+	private setStatus(status?: 'connecting' | 'generating' | '') {
+		switch (status) {
+			case 'connecting':
+				this.statusBarItem.text.setText('Connecting...')
+				setIcon(this.statusBarItem.icon, 'globe')
+				break
+			case 'generating':
+				this.statusBarItem.text.setText('Generating...')
+				setIcon(this.statusBarItem.icon, 'arrow-up-down')
+				break
+			default:
+				this.statusBarItem.text.setText('')
+				setIcon(this.statusBarItem.icon, '')
+		}
 	}
 
 	async loadSettings() {

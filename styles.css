@@ -1,3 +1,17 @@
+.status-bar-container {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.status-bar-icon {
+	--icon-s: 12px;
+}
+
+.status-bar-text {
+	margin-left: 2px;
+}
+
 .input-modal-container {
 	width: 100%;
 	height: fit-content;
