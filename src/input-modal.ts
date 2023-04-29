@@ -11,11 +11,18 @@ export class InputModal extends Modal {
 		super(app);
 		this.title = title
 		this.onSubmit = onSubmit
+
+		if (!Platform.isMobileApp) {
+			this.scope.register([], 'Enter', () => {
+				this.onConfirm()
+				return false
+			})
+		}
 	}
 
 	onOpen() {
-		const { contentEl } = this;
-		
+		const {contentEl} = this;
+
 		new Setting(contentEl).setName(this.title)
 
 		const container = contentEl.createDiv()
@@ -28,14 +35,6 @@ export class InputModal extends Modal {
 		this.inputField.onChange((change) => {
 			this.input = change;
 		});
-
-		if (!Platform.isMobileApp) {
-			this.inputField.inputEl.addEventListener("keydown", (event: KeyboardEvent) => {
-				if (event.key === "Enter" && !event.shiftKey) {
-					this.onConfirm()
-				}
-			});
-		}
 
 		new Setting(contentEl).addButton((btn) =>
 			btn.setButtonText("OK")
@@ -52,7 +51,7 @@ export class InputModal extends Modal {
 	}
 
 	onClose() {
-		const { contentEl } = this;
+		const {contentEl} = this;
 		contentEl.empty();
 	}
 }
