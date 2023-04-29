@@ -1,3 +1,5 @@
+import { Message } from "./chat-gpt";
+
 export interface Command {
 	//unique id for the command
 	id: string,
@@ -8,7 +10,7 @@ export interface Command {
 	//name for the command
 	name: string,
 
-	messages: { role: string, content: string, name?: string }[],
+	messages: Message[],
 
 	//response format
 	format?: string

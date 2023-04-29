@@ -1,28 +1,43 @@
-import { log } from "console";
 import { SSE } from "sse.js";
 
+type SSE = typeof SSE
+
+export interface Message {
+	role: string,
+	content: string,
+	name?: string
+}
+
+interface RequestData {
+	endpoint: string,
+	token: string,
+	model: string,
+	messages: Array<Message>,
+	onMessage: (text: string) => void,
+	onConnecting?: () => void,
+	onStart?: () => void,
+	onEnd?: () => void,
+	onError?: (text: string) => void,
+}
 
 export class ChatGPT {
-	static request(
-		endpoint: string,
-		token: string,
-		model: string,
-		messages: Array<any>,
-		onMessage: (text: string) => void,
-		onError: (text: string) => void,
-		onStart: () => void,
-		onEnd: () => void,
-	) {
+	sse: SSE
+
+	request(request: RequestData) {
 
 		const data = {
-			model: model,
-			messages: messages,
+			model: request.model,
+			messages: request.messages,
 			stream: true,
 		}
 
-		const sse = new SSE(endpoint, {
+		if (this.sse) {
+			this.abort()
+		}
+
+		this.sse = new SSE(request.endpoint, {
 			headers: {
-				Authorization: `Bearer ${token}`,
+				Authorization: `Bearer ${request.token}`,
 				"Content-Type": "application/json",
 			},
 			method: "POST",
@@ -30,7 +45,7 @@ export class ChatGPT {
 		});
 
 
-		sse.addEventListener('message', function (e: any) {
+		this.sse.addEventListener('message', function (e: any) {
 			try {
 				if (e.data == '[DONE]') return;
 
@@ -38,32 +53,44 @@ export class ChatGPT {
 				const content = json.choices[0].delta.content
 
 				if (content) {
-					onMessage(content)
+					request.onMessage(content)
 				}
 
 			} catch (e) {
-				onError(e.toString())
+				request.onError?.(e.toString())
 			}
 		});
 
-		sse.addEventListener("error", (e: any) => {
+		this.sse.addEventListener("error", (e: any) => {
 			try {
 				console.log("error data: " + e.data)
 				const json = JSON.parse(e.data)
-				onError(json.error.message)
+				request.onError?.(json.error.message)
 			} catch (e) {
-				onError("On error occurred. Please check the console for more details.")
+				request.onError?.("On error occurred. Please check the console for more details.")
 			}
 		});
 
-		sse.addEventListener("readystatechange", (e: any) => {
+		this.sse.addEventListener("readystatechange", (e: any) => {
 			console.log("sse ready state = " + e.readyState)
-			if (e.readyState == SSE.OPEN) {
-				onStart()
-			} else if (e.readyState == SSE.CLOSED) {
-				onEnd()
+			switch (e.readyState) {
+				case 1:
+					request.onStart?.()
+					break;
+				case 2:
+					request.onEnd?.()
+					break;
+				case 0:
+					request.onConnecting?.()
+					break;
 			}
 		});
-		sse.stream()
+		this.sse.stream()
+	}
+
+	abort() {
+		if (this.sse && this.sse.readyState != -1) {
+			this.sse.close()
+		}
 	}
 }

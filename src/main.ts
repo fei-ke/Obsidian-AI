@@ -1,14 +1,16 @@
-import { App, Editor, EditorPosition, EditorTransaction, Notice, Plugin } from 'obsidian';
+import { Editor, EditorPosition, EditorTransaction, Notice, Plugin } from 'obsidian';
 import { PluginSettings, DEFAULT_SETTINGS, ObsidianSettingTab } from './settings'
 import { InputModal } from './input-modal';
 import { Command as AiCommand, DEFAULT_COMMANDS } from './command';
-import { ChatGPT } from './chat-gpt';
+import { ChatGPT, Message } from './chat-gpt';
 import { PopupMenu } from './popup-menu';
 
 export default class ObsidianPlugin extends Plugin {
 	public settings: PluginSettings;
 
 	private popupMenu: PopupMenu;
+
+	private chatGPT = new ChatGPT()
 
 	async onload() {
 		await this.loadSettings();
@@ -53,6 +55,19 @@ export default class ObsidianPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'abort-generating',
+			name: 'Abort Generating',
+			icon: 'x-octagon',
+			hotkeys: [{
+				modifiers: ["Ctrl"],
+				key: "c",
+			}],
+			callback: () => {
+				console.log("abort generate")
+				this.chatGPT.abort()
+			}
+		});
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObsidianSettingTab(this.app, this));
 	}
@@ -70,7 +85,7 @@ export default class ObsidianPlugin extends Plugin {
 	}
 
 	async processCommand(command: AiCommand, editor: Editor) {
-		const messages: any[] = []
+		const messages: Message[] = []
 
 		function requestInput() {
 			return Promise.resolve(this.showInputModal(command.name))
@@ -86,7 +101,7 @@ export default class ObsidianPlugin extends Plugin {
 		this.generateText(editor, messages, command.format)
 	}
 
-	generateText(editor: Editor, messages: any[], format: string = '\n{{RESPONSE}}\n') {
+	generateText(editor: Editor, messages: Message[], format: string = '\n{{RESPONSE}}\n') {
 		console.log("messages: " + JSON.stringify(messages))
 		console.log("format: " + format)
 
@@ -112,25 +127,22 @@ export default class ObsidianPlugin extends Plugin {
 			this.writeText(editor, cursorToWrite, suffix)
 		}
 
-		const plugin = this
-
-		ChatGPT.request(
-			this.settings.endpoint,
-			this.settings.openApiKey,
-			this.settings.model,
-			messages,
-			(content: string) => {
-				cursorToWrite = plugin.writeText(editor, cursorToWrite, content)
+		this.chatGPT.request({
+			endpoint: this.settings.endpoint,
+			token: this.settings.openApiKey,
+			model: this.settings.model,
+			messages: messages,
+			onMessage: (content: string) => {
+				cursorToWrite = this.writeText(editor, cursorToWrite, content)
 			},
-			(error: string) => {
+			onError: (error: string) => {
 				new Notice(error);
 			},
-			() => {
-
+			onStart: () => {
 			},
-			() => {
-
-			})
+			onEnd: () => {
+			}
+		})
 	}
 
 	writeText(editor: Editor, pos: EditorPosition, text: string): EditorPosition {
