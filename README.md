@@ -32,7 +32,7 @@ Here is a sample:
   }
 ]
 ```
-</summary>
+</details>    
 
 
 ## How to install
