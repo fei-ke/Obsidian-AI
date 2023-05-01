@@ -80,11 +80,11 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 		messages: [
 			{
 				role: 'system',
-				content: "Help writing a brife outline for a document, formatted in markdown and do not include title. Use the user's language to response.",
+				content: "Help writing a outline for a document, formatted in markdown and do not include title. Use the user's language to response.",
 			},
 			{
 				role: 'user',
-				content: '{{SELECTION|TITLE}}',
+				content: 'outline about: {{SELECTION|TITLE}}',
 			}
 		]
 	},
@@ -95,7 +95,7 @@ export const DEFAULT_COMMANDS: Array<Command> = [
 		messages: [
 			{
 				role: 'system',
-				content: "Help writing a brief summary for a document, do not include a title, Use the user's language to response, Respond using markdown.",
+				content: "Help writing a clear and concise summary, reply only summary, Use the user's language to response, Respond using markdown.",
 			},
 			{
 				role: 'user',
